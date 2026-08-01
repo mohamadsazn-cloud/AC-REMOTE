@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>AC Remote</title>
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #f0f2f5;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 14px;
+    }
+    .card {
+      max-width: 400px;
+      margin: auto;
+      background: #fff;
+      padding: 18px;
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.1);
+    }
+    h2 { color: #1565c0; margin: 0 0 8px; }
+    .conn {
+      display: inline-block;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .conn.ok { background: #e8f5e9; color: #2e7d32; }
+    .conn.no { background: #ffebee; color: #c62828; }
+    .conn.wait { background: #fff8e1; color: #f57f17; }
+    .info {
+      background: #f5f7fa;
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: left;
+      margin-bottom: 14px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    .info b { display: inline-block; width: 70px; color: #555; }
+    .status-line {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      word-break: break-word;
+    }
+    button {
+      min-width: 130px;
+      height: 48px;
+      margin: 6px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.96); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .power-on { background: #43a047; }
+    .power-off { background: #e53935; }
+    .gray { background: #546e7a; }
+    .hint {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #888;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>AC Remote</h2>
+    <div id="conn" class="conn wait">Connecting...</div>
+
+    <div class="info">
+      <b>Status</b><br>
+      <div id="statusText" class="status-line">Waiting for device...</div>
+    </div>
+
+    <button id="powerBtn" class="power-on" onclick="sendPower('TOGGLE')" disabled>POWER</button>
+    <br>
+    <button class="gray" onclick="sendPower('ON')" disabled id="btnOn">ON</button>
+    <button class="gray" onclick="sendPower('OFF')" disabled id="btnOff">OFF</button>
+
+    <div class="hint">
+      Remote control via MQTT<br>
+      Topics: ac9f2k7x/p · ac9f2k7x/s
+    </div>
+  </div>
+
+  <script>
+    const TOPIC_POWER  = 'ac9f2k7x/p';
+    const TOPIC_STATUS = 'ac9f2k7x/s';
+
+    const BROKER_URLS = [
+      'wss://broker.hivemq.com:8884/mqtt',
+      'ws://broker.hivemq.com:8000/mqtt'
+    ];
+
+    let client = null;
+    let connected = false;
+
+    function setConn(state, text) {
+      const el = document.getElementById('conn');
+      el.className = 'conn ' + state;
+      el.textContent = text;
+      const en = state === 'ok';
+      document.getElementById('powerBtn').disabled = !en;
+      document.getElementById('btnOn').disabled = !en;
+      document.getElementById('btnOff').disabled = !en;
+    }
+
+    function updateStatusUI(msg) {
+      document.getElementById('statusText').textContent = msg || '—';
+      const btn = document.getElementById('powerBtn');
+      if (/^ON\b/i.test(msg) || msg.includes('ON |')) {
+        btn.className = 'power-off';
+        btn.textContent = 'POWER OFF';
+      } else if (/^OFF\b/i.test(msg) || msg.includes('OFF |')) {
+        btn.className = 'power-on';
+        btn.textContent = 'POWER ON';
+      }
+    }
+
+    function sendPower(payload) {
+      if (!client || !connected) return;
+      client.publish(TOPIC_POWER, payload, { qos: 0 });
+      console.log('Published', TOPIC_POWER, payload);
+    }
+
+    function connectMQTT(urlIndex) {
+      if (urlIndex >= BROKER_URLS.length) {
+        setConn('no', 'Connection failed');
+        return;
+      }
+
+      const url = BROKER_URLS[urlIndex];
+      setConn('wait', 'Connecting...');
+      console.log('Try:', url);
+
+      if (client) {
+        try { client.end(true); } catch (e) {}
+      }
+
+      client = mqtt.connect(url, {
+        clientId: 'web_' + Math.random().toString(16).slice(2, 10),
+        clean: true,
+        connectTimeout: 8000,
+        reconnectPeriod: 0
+      });
+
+      client.on('connect', function () {
+        connected = true;
+        setConn('ok', 'Connected');
+        client.subscribe(TOPIC_STATUS, { qos: 0 });
+        console.log('MQTT connected, subscribed', TOPIC_STATUS);
+      });
+
+      client.on('message', function (topic, payload) {
+        const msg = payload.toString();
+        console.log('Msg', topic, msg);
+        if (topic === TOPIC_STATUS) updateStatusUI(msg);
+      });
+
+      client.on('error', function (err) {
+        console.warn('MQTT error', err);
+      });
+
+      client.on('close', function () {
+        if (connected) {
+          connected = false;
+          setConn('no', 'Disconnected');
+        }
+      });
+
+      setTimeout(function () {
+        if (!connected) {
+          try { client.end(true); } catch (e) {}
+          connectMQTT(urlIndex + 1);
+        }
+      }, 8500);
+    }
+
+    connectMQTT(0);
+  </script>
+</body>
+</html>
