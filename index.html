@@ -6,72 +6,32 @@
   <title>AC Remote</title>
   <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      background: #f0f2f5;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 14px;
-    }
-    .card {
-      max-width: 400px;
-      margin: auto;
-      background: #fff;
-      padding: 18px;
-      border-radius: 14px;
-      box-shadow: 0 4px 18px rgba(0,0,0,.1);
-    }
-    h2 { color: #1565c0; margin: 0 0 8px; }
-    .conn {
-      display: inline-block;
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    .conn.ok { background: #e8f5e9; color: #2e7d32; }
-    .conn.no { background: #ffebee; color: #c62828; }
-    .conn.wait { background: #fff8e1; color: #f57f17; }
-    .info {
-      background: #f5f7fa;
-      border-radius: 10px;
-      padding: 12px 14px;
-      text-align: left;
-      margin-bottom: 14px;
-      font-size: 14px;
-      line-height: 1.8;
-    }
-    .info b { display: inline-block; width: 70px; color: #555; }
-    .status-line {
-      font-size: 15px;
-      font-weight: 600;
-      color: #333;
-      word-break: break-word;
-    }
-    button {
-      min-width: 130px;
-      height: 48px;
-      margin: 6px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #fff;
-      cursor: pointer;
-    }
-    button:active { transform: scale(0.96); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .power-on { background: #43a047; }
-    .power-off { background: #e53935; }
-    .gray { background: #546e7a; }
-    .hint {
-      margin-top: 14px;
-      font-size: 11px;
-      color: #888;
-      line-height: 1.5;
-    }
+    *{box-sizing:border-box}
+    body{background:#f0f2f5;font-family:Arial,sans-serif;text-align:center;margin:0;padding:14px}
+    .card{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.1)}
+    h2{color:#1565c0;margin:0 0 6px}
+    .conn{display:inline-block;font-size:12px;padding:4px 10px;border-radius:20px;margin-bottom:12px;font-weight:600}
+    .conn.ok{background:#e8f5e9;color:#2e7d32}
+    .conn.no{background:#ffebee;color:#c62828}
+    .conn.wait{background:#fff8e1;color:#f57f17}
+    .info{background:#f5f7fa;border-radius:10px;padding:12px 14px;text-align:left;margin-bottom:12px;font-size:14px;line-height:1.75}
+    .info b{display:inline-block;width:72px;color:#555}
+    .temp{font-size:42px;font-weight:bold;color:#1565c0;margin:6px 0}
+    .row{display:flex;justify-content:center;gap:14px;margin:8px 0}
+    .temp-btn{width:58px;height:58px;border:none;border-radius:50%;font-size:24px;font-weight:bold;background:#1976d2;color:#fff;cursor:pointer}
+    button{min-width:115px;height:44px;margin:5px;border:none;border-radius:10px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
+    button:active{transform:scale(.96)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .power-on{background:#43a047}.power-off{background:#e53935}
+    .gray{background:#546e7a}.blue{background:#1e88e5}.teal{background:#00897b}.red{background:#e53935}
+    .section{background:#f8f9fa;border-radius:10px;padding:12px;margin-top:12px;text-align:left}
+    .section h3{margin:0 0 8px;font-size:13px;color:#333}
+    select,input{padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin:2px 0}
+    .titem{background:#e3f2fd;padding:10px;border-radius:8px;margin:8px 0;font-size:13px}
+    .titem b{color:#1565c0}
+    .small{height:34px;font-size:12px;min-width:auto;padding:0 12px}
+    .hint{margin-top:10px;font-size:11px;color:#888}
+    .raw{font-size:11px;color:#999;margin-top:6px;word-break:break-all}
   </style>
 </head>
 <body>
@@ -80,25 +40,58 @@
     <div id="conn" class="conn wait">Connecting...</div>
 
     <div class="info">
-      <b>Status</b><br>
-      <div id="statusText" class="status-line">Waiting for device...</div>
+      <b>Power</b>: <span id="vPower">—</span><br>
+      <b>Mode</b>: <span id="vMode">—</span><br>
+      <b>Fan</b>: <span id="vFan">—</span><br>
+      <b>Temp</b>: <span id="vTemp">—</span>°C<br>
+      <b>Swing</b>: <span id="vSwing">—</span><br>
+      <b>Model</b>: <span id="vModel">—</span>
+      <div class="raw" id="rawStatus"></div>
     </div>
 
-    <button id="powerBtn" class="power-on" onclick="sendPower('TOGGLE')" disabled>POWER</button>
-    <br>
-    <button class="gray" onclick="sendPower('ON')" disabled id="btnOn">ON</button>
-    <button class="gray" onclick="sendPower('OFF')" disabled id="btnOff">OFF</button>
-
-    <div class="hint">
-      Remote control via MQTT<br>
-      Topics: ac9f2k7x/p · ac9f2k7x/s
+    <div class="temp" id="tempBig">--°C</div>
+    <div class="row">
+      <button class="temp-btn" id="btnUp" onclick="pub('ac9f2k7x/tempup','1')" disabled>+</button>
+      <button class="temp-btn" id="btnDown" onclick="pub('ac9f2k7x/tempdown','1')" disabled>−</button>
     </div>
+
+    <button id="powerBtn" class="power-on" onclick="pub('ac9f2k7x/p','TOGGLE')" disabled>POWER</button><br>
+    <button class="gray" id="btnMode" onclick="pub('ac9f2k7x/mode','1')" disabled>MODE</button>
+    <button class="gray" id="btnFan" onclick="pub('ac9f2k7x/fan','1')" disabled>FAN</button><br>
+    <button class="blue" id="btnSud" onclick="pub('ac9f2k7x/swing_ud','1')" disabled>SWING ↕</button>
+    <button class="blue" id="btnSlr" onclick="pub('ac9f2k7x/swing_lr','1')" disabled>SWING ↔</button>
+
+    <div class="section">
+      <h3>🏷 AC Model</h3>
+      <select id="modelSelect" onchange="setModel()" disabled>
+        <option value="0">Hisense</option>
+        <option value="1">Samsung</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h3>⏱ Timers</h3>
+      <div id="timerList"><div style="color:#999;font-size:13px">Waiting for device status...</div></div>
+
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #ddd">
+        <b>Add timer (remote)</b><br>
+        Model:
+        <select id="newModel">
+          <option value="0">Hisense</option>
+          <option value="1">Samsung</option>
+        </select><br>
+        ON: <input type="time" id="newOn" value="08:00">
+        OFF: <input type="time" id="newOff" value="22:00"><br>
+        <button class="teal small" id="btnAddTimer" onclick="addTimer()" disabled>Add Timer</button>
+      </div>
+      <div class="hint">Timer control works after ESP firmware update</div>
+    </div>
+
+    <div class="hint">MQTT · ac9f2k7x/*</div>
   </div>
 
   <script>
-    const TOPIC_POWER  = 'ac9f2k7x/p';
     const TOPIC_STATUS = 'ac9f2k7x/s';
-
     const BROKER_URLS = [
       'wss://broker.hivemq.com:8884/mqtt',
       'ws://broker.hivemq.com:8000/mqtt'
@@ -106,48 +99,115 @@
 
     let client = null;
     let connected = false;
+    // کش محلی تایمرها (تا وقتی ESP لیست را در Status بفرستد)
+    let localTimers = [];
 
     function setConn(state, text) {
       const el = document.getElementById('conn');
       el.className = 'conn ' + state;
       el.textContent = text;
       const en = state === 'ok';
-      document.getElementById('powerBtn').disabled = !en;
-      document.getElementById('btnOn').disabled = !en;
-      document.getElementById('btnOff').disabled = !en;
+      ['powerBtn','btnUp','btnDown','btnMode','btnFan','btnSud','btnSlr','modelSelect','btnAddTimer']
+        .forEach(id => { const e=document.getElementById(id); if(e) e.disabled = !en; });
     }
 
-    function updateStatusUI(msg) {
-      document.getElementById('statusText').textContent = msg || '—';
-      const btn = document.getElementById('powerBtn');
-      if (/^ON\b/i.test(msg) || msg.includes('ON |')) {
-        btn.className = 'power-off';
-        btn.textContent = 'POWER OFF';
-      } else if (/^OFF\b/i.test(msg) || msg.includes('OFF |')) {
-        btn.className = 'power-on';
-        btn.textContent = 'POWER ON';
-      }
-    }
-
-    function sendPower(payload) {
+    function pub(topic, payload) {
       if (!client || !connected) return;
-      client.publish(TOPIC_POWER, payload, { qos: 0 });
-      console.log('Published', TOPIC_POWER, payload);
+      client.publish(topic, String(payload), { qos: 0 });
+      console.log('→', topic, payload);
     }
 
-    function connectMQTT(urlIndex) {
-      if (urlIndex >= BROKER_URLS.length) {
-        setConn('no', 'Connection failed');
+    function setModel() {
+      pub('ac9f2k7x/model', document.getElementById('modelSelect').value);
+    }
+
+    function addTimer() {
+      const m = document.getElementById('newModel').value;
+      const on = document.getElementById('newOn').value;
+      const off = document.getElementById('newOff').value;
+      if (!on || !off) return alert('Set ON and OFF time');
+      // payload: model,on,off
+      pub('ac9f2k7x/timer_add', m + ',' + on + ',' + off);
+      // نمایش موقت تا Status از ESP بیاید
+      localTimers.push({ model: m==='1'?'Samsung':'Hisense', on, off, enabled: true });
+      renderTimers();
+      alert('Timer command sent. Will apply after ESP update supports it.');
+    }
+
+    function delTimer(i) {
+      pub('ac9f2k7x/timer_del', String(i));
+      localTimers.splice(i, 1);
+      renderTimers();
+    }
+
+    function toggleTimer(i) {
+      pub('ac9f2k7x/timer_toggle', String(i));
+      if (localTimers[i]) localTimers[i].enabled = !localTimers[i].enabled;
+      renderTimers();
+    }
+
+    function renderTimers() {
+      const box = document.getElementById('timerList');
+      if (!localTimers.length) {
+        box.innerHTML = '<div style="color:#999;font-size:13px">No timers</div>';
         return;
       }
+      let h = '';
+      localTimers.forEach((t, i) => {
+        h += `<div class="titem">
+          <b>${t.model||'?'}</b> ${t.enabled?'✅':'⏸'}
+          ON <b>${t.on}</b> → OFF <b>${t.off}</b><br>
+          <button class="small gray" onclick="toggleTimer(${i})">${t.enabled?'Disable':'Enable'}</button>
+          <button class="small red" onclick="delTimer(${i})">Delete</button>
+        </div>`;
+      });
+      box.innerHTML = h;
+    }
 
-      const url = BROKER_URLS[urlIndex];
-      setConn('wait', 'Connecting...');
-      console.log('Try:', url);
+    function parseStatus(msg) {
+      document.getElementById('rawStatus').textContent = msg;
+      // مثال: ON | 24C | Cool | Fan Auto | Hisense
+      // یا کامل‌تر با Swing
+      const parts = msg.split('|').map(s => s.trim());
 
-      if (client) {
-        try { client.end(true); } catch (e) {}
+      let power = '—', temp = '—', mode = '—', fan = '—', swing = '—', model = '—';
+
+      parts.forEach(p => {
+        if (/^(ON|OFF)$/i.test(p)) power = p.toUpperCase();
+        else if (/^\d+\s*C$/i.test(p)) temp = p.replace(/\s*C/i,'');
+        else if (/^Fan\s+/i.test(p)) fan = p.replace(/^Fan\s+/i,'');
+        else if (/^Swing\s+/i.test(p)) swing = p.replace(/^Swing\s+/i,'');
+        else if (/Hisense|Samsung/i.test(p)) model = p;
+        else if (/Cool|Heat|Dry|Fan|Smart|Auto/i.test(p) && !/^Fan\s/i.test(p)) mode = p;
+      });
+
+      // fallback: اولین تکه power
+      if (power === '—' && parts[0]) {
+        if (/ON/i.test(parts[0])) power = 'ON';
+        if (/OFF/i.test(parts[0])) power = 'OFF';
       }
+
+      document.getElementById('vPower').textContent = power;
+      document.getElementById('vMode').textContent = mode;
+      document.getElementById('vFan').textContent = fan;
+      document.getElementById('vTemp').textContent = temp;
+      document.getElementById('vSwing').textContent = swing;
+      document.getElementById('vModel').textContent = model;
+      if (temp !== '—') document.getElementById('tempBig').textContent = temp + '°C';
+
+      const btn = document.getElementById('powerBtn');
+      if (power === 'ON') { btn.className = 'power-off'; btn.textContent = 'POWER OFF'; }
+      else if (power === 'OFF') { btn.className = 'power-on'; btn.textContent = 'POWER ON'; }
+
+      if (/Samsung/i.test(model)) document.getElementById('modelSelect').value = '1';
+      else if (/Hisense/i.test(model)) document.getElementById('modelSelect').value = '0';
+    }
+
+    function connectMQTT(i) {
+      if (i >= BROKER_URLS.length) { setConn('no', 'Connection failed'); return; }
+      const url = BROKER_URLS[i];
+      setConn('wait', 'Connecting...');
+      if (client) try { client.end(true); } catch(e){}
 
       client = mqtt.connect(url, {
         clientId: 'web_' + Math.random().toString(16).slice(2, 10),
@@ -156,38 +216,26 @@
         reconnectPeriod: 0
       });
 
-      client.on('connect', function () {
+      client.on('connect', () => {
         connected = true;
         setConn('ok', 'Connected');
-        client.subscribe(TOPIC_STATUS, { qos: 0 });
-        console.log('MQTT connected, subscribed', TOPIC_STATUS);
+        client.subscribe(TOPIC_STATUS);
       });
-
-      client.on('message', function (topic, payload) {
-        const msg = payload.toString();
-        console.log('Msg', topic, msg);
-        if (topic === TOPIC_STATUS) updateStatusUI(msg);
+      client.on('message', (topic, payload) => {
+        if (topic === TOPIC_STATUS) parseStatus(payload.toString());
       });
-
-      client.on('error', function (err) {
-        console.warn('MQTT error', err);
+      client.on('close', () => {
+        if (connected) { connected = false; setConn('no', 'Disconnected'); }
       });
-
-      client.on('close', function () {
-        if (connected) {
-          connected = false;
-          setConn('no', 'Disconnected');
-        }
-      });
-
-      setTimeout(function () {
+      setTimeout(() => {
         if (!connected) {
-          try { client.end(true); } catch (e) {}
-          connectMQTT(urlIndex + 1);
+          try { client.end(true); } catch(e){}
+          connectMQTT(i + 1);
         }
       }, 8500);
     }
 
+    renderTimers();
     connectMQTT(0);
   </script>
 </body>
