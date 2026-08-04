@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -16,6 +16,13 @@
     .conn.ok{background:#e8f5e9;color:#2e7d32}
     .conn.no{background:#ffebee;color:#c62828}
     .conn.wait{background:#fff8e1;color:#f57f17}
+    .toast{
+      display:none;margin:0 auto 10px;max-width:100%;
+      background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;
+      padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;
+    }
+    .toast.show{display:block}
+    .toast.err{background:#ffebee;color:#b71c1c;border-color:#ef9a9a}
     .info{background:#f5f7fa;border-radius:10px;padding:12px 14px;text-align:left;margin-bottom:12px;font-size:14px;line-height:1.75}
     .info b{display:inline-block;width:72px;color:#555}
     .temp{font-size:42px;font-weight:bold;color:#1565c0;margin:6px 0}
@@ -41,6 +48,7 @@
     <div class="clock" id="clock">--:--</div>
     <div class="date" id="date"></div>
     <div id="conn" class="conn wait">Connecting...</div>
+    <div id="toast" class="toast"></div>
 
     <div class="info">
       <b>Power</b>: <span id="vPower">—</span><br>
@@ -53,18 +61,18 @@
 
     <div class="temp" id="tempBig">--°C</div>
     <div class="row">
-      <button class="temp-btn" id="btnUp" onclick="pub('ac9f2k7x/tempup','1')" disabled>+</button>
-      <button class="temp-btn" id="btnDown" onclick="pub('ac9f2k7x/tempdown','1')" disabled>−</button>
+      <button class="temp-btn" id="btnUp" onclick="send('ac9f2k7x/tempup','1')" disabled>+</button>
+      <button class="temp-btn" id="btnDown" onclick="send('ac9f2k7x/tempdown','1')" disabled>−</button>
     </div>
 
-    <button id="powerBtn" class="power-on" onclick="pub('ac9f2k7x/p','TOGGLE')" disabled>POWER</button><br>
-    <button class="gray" id="btnMode" onclick="pub('ac9f2k7x/mode','1')" disabled>MODE</button>
-    <button class="gray" id="btnFan" onclick="pub('ac9f2k7x/fan','1')" disabled>FAN</button><br>
-    <button class="blue" id="btnSud" onclick="pub('ac9f2k7x/swing_ud','1')" disabled>SWING ↕</button>
-    <button class="blue" id="btnSlr" onclick="pub('ac9f2k7x/swing_lr','1')" disabled>SWING ↔</button>
+    <button id="powerBtn" class="power-on" onclick="send('ac9f2k7x/p','TOGGLE')" disabled>POWER</button><br>
+    <button class="gray" id="btnMode" onclick="send('ac9f2k7x/mode','1')" disabled>MODE</button>
+    <button class="gray" id="btnFan" onclick="send('ac9f2k7x/fan','1')" disabled>FAN</button><br>
+    <button class="blue" id="btnSud" onclick="send('ac9f2k7x/swing_ud','1')" disabled>SWING ↕</button>
+    <button class="blue" id="btnSlr" onclick="send('ac9f2k7x/swing_lr','1')" disabled>SWING ↔</button>
 
     <div class="section">
-      <h3>🏷 AC Model</h3>
+      <h3>AC Model</h3>
       <select id="modelSelect" onchange="setModel()" disabled>
         <option value="0">Hisense</option>
         <option value="1">Samsung</option>
@@ -72,7 +80,7 @@
     </div>
 
     <div class="section">
-      <h3>⏱ Timers</h3>
+      <h3>Timers</h3>
       <div id="timerList"><div style="color:#999;font-size:13px">No timers</div></div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px solid #ddd">
         <b>Add timer</b><br>
@@ -92,19 +100,22 @@
 
   <script>
     const TOPIC_STATUS = 'ac9f2k7x/s';
+    const TOPIC_ACK    = 'ac9f2k7x/ack';
     const BROKER_URLS = [
       'wss://broker.hivemq.com:8884/mqtt',
       'ws://broker.hivemq.com:8000/mqtt'
     ];
-    let client = null, connected = false;
+
+    let client = null;
+    let connected = false;
     let localTimers = [];
+    let toastTimer = null;
 
     function tickClock() {
       const now = new Date();
-      // نمایش به وقت محلی گوشی (ایران اگر گوشی روی ایران باشد)
-      const hh = String(now.getHours()).padStart(2,'0');
-      const mm = String(now.getMinutes()).padStart(2,'0');
-      document.getElementById('clock').textContent = hh + ':' + mm;
+      document.getElementById('clock').textContent =
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0');
       document.getElementById('date').textContent =
         now.getFullYear() + '/' +
         String(now.getMonth()+1).padStart(2,'0') + '/' +
@@ -119,24 +130,38 @@
       el.textContent = text;
       const en = state === 'ok';
       ['powerBtn','btnUp','btnDown','btnMode','btnFan','btnSud','btnSlr','modelSelect','btnAddTimer']
-        .forEach(id => { const e=document.getElementById(id); if(e) e.disabled = !en; });
+        .forEach(id => {
+          const e = document.getElementById(id);
+          if (e) e.disabled = !en;
+        });
     }
 
-    function pub(topic, payload) {
+    function showToast(text, isError) {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.className = 'toast show' + (isError ? ' err' : '');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.className = 'toast';
+      }, 2500);
+    }
+
+    function send(topic, payload) {
       if (!client || !connected) return;
       client.publish(topic, String(payload), { qos: 0 });
+      // waiting for ACK from device
     }
 
     function setModel() {
-      pub('ac9f2k7x/model', document.getElementById('modelSelect').value);
+      send('ac9f2k7x/model', document.getElementById('modelSelect').value);
     }
 
     function addTimer() {
       const m = document.getElementById('newModel').value;
       const on = document.getElementById('newOn').value;
       const off = document.getElementById('newOff').value;
-      if (!on || !off) return alert('Set ON and OFF');
-      pub('ac9f2k7x/timer_add', m + ',' + on + ',' + off);
+      if (!on || !off) return;
+      send('ac9f2k7x/timer_add', m + ',' + on + ',' + off);
       localTimers.push({
         model: m === '1' ? 'Samsung' : 'Hisense',
         on, off, enabled: true
@@ -145,13 +170,13 @@
     }
 
     function delTimer(i) {
-      pub('ac9f2k7x/timer_del', String(i));
+      send('ac9f2k7x/timer_del', String(i));
       localTimers.splice(i, 1);
       renderTimers();
     }
 
     function toggleTimer(i) {
-      pub('ac9f2k7x/timer_toggle', String(i));
+      send('ac9f2k7x/timer_toggle', String(i));
       if (localTimers[i]) localTimers[i].enabled = !localTimers[i].enabled;
       renderTimers();
     }
@@ -165,7 +190,7 @@
       let h = '';
       localTimers.forEach((t, i) => {
         h += `<div class="titem">
-          <b>${t.model || '?'}</b> ${t.enabled ? '✅' : '⏸'}<br>
+          <b>${t.model || '?'}</b> ${t.enabled ? 'ON' : 'OFF'}<br>
           ON &nbsp;<b>${t.on}</b><br>
           OFF <b>${t.off}</b><br>
           <button class="small gray" onclick="toggleTimer(${i})">${t.enabled ? 'Disable' : 'Enable'}</button>
@@ -175,21 +200,34 @@
       box.innerHTML = h;
     }
 
+    function handleAck(msg) {
+      // examples: OK:power  OK:tempup  OK:timer_add_fail
+      if (msg.indexOf('fail') >= 0 || msg.indexOf('bad') >= 0) {
+        showToast('Failed: ' + msg.replace(/^OK:/, ''), true);
+      } else {
+        const name = msg.replace(/^OK:/, '');
+        showToast('Received: ' + name, false);
+      }
+    }
+
     function parseStatus(msg) {
       const parts = msg.split('|').map(s => s.trim());
-      let power='—', temp='—', mode='—', fan='—', swing='—', model='—';
+      let power = '—', temp = '—', mode = '—', fan = '—', swing = '—', model = '—';
+
       parts.forEach(p => {
         if (/^(ON|OFF)$/i.test(p)) power = p.toUpperCase();
-        else if (/^\d+\s*C$/i.test(p)) temp = p.replace(/\s*C/i,'');
-        else if (/^Fan\s+/i.test(p)) fan = p.replace(/^Fan\s+/i,'');
-        else if (/^Swing\s+/i.test(p)) swing = p.replace(/^Swing\s+/i,'');
+        else if (/^\d+\s*C$/i.test(p)) temp = p.replace(/\s*C/i, '');
+        else if (/^Fan\s+/i.test(p)) fan = p.replace(/^Fan\s+/i, '');
+        else if (/^Swing\s+/i.test(p)) swing = p.replace(/^Swing\s+/i, '');
         else if (/Hisense|Samsung/i.test(p)) model = p;
         else if (/Cool|Heat|Dry|Fan|Smart|Auto/i.test(p) && !/^Fan\s/i.test(p)) mode = p;
       });
-      if (power==='—' && parts[0]) {
-        if (/ON/i.test(parts[0])) power='ON';
-        if (/OFF/i.test(parts[0])) power='OFF';
+
+      if (power === '—' && parts[0]) {
+        if (/ON/i.test(parts[0])) power = 'ON';
+        if (/OFF/i.test(parts[0])) power = 'OFF';
       }
+
       document.getElementById('vPower').textContent = power;
       document.getElementById('vMode').textContent = mode;
       document.getElementById('vFan').textContent = fan;
@@ -197,36 +235,59 @@
       document.getElementById('vSwing').textContent = swing;
       document.getElementById('vModel').textContent = model;
       if (temp !== '—') document.getElementById('tempBig').textContent = temp + '°C';
+
       const btn = document.getElementById('powerBtn');
-      if (power === 'ON') { btn.className='power-off'; btn.textContent='POWER OFF'; }
-      else if (power === 'OFF') { btn.className='power-on'; btn.textContent='POWER ON'; }
-      if (/Samsung/i.test(model)) document.getElementById('modelSelect').value='1';
-      else if (/Hisense/i.test(model)) document.getElementById('modelSelect').value='0';
+      if (power === 'ON') {
+        btn.className = 'power-off';
+        btn.textContent = 'POWER OFF';
+      } else if (power === 'OFF') {
+        btn.className = 'power-on';
+        btn.textContent = 'POWER ON';
+      }
+
+      if (/Samsung/i.test(model)) document.getElementById('modelSelect').value = '1';
+      else if (/Hisense/i.test(model)) document.getElementById('modelSelect').value = '0';
     }
 
     function connectMQTT(i) {
-      if (i >= BROKER_URLS.length) { setConn('no','Connection failed'); return; }
-      setConn('wait','Connecting...');
-      if (client) try { client.end(true); } catch(e){}
+      if (i >= BROKER_URLS.length) {
+        setConn('no', 'Connection failed');
+        return;
+      }
+      setConn('wait', 'Connecting...');
+      if (client) try { client.end(true); } catch (e) {}
+
       client = mqtt.connect(BROKER_URLS[i], {
-        clientId: 'web_' + Math.random().toString(16).slice(2,10),
-        clean: true, connectTimeout: 8000, reconnectPeriod: 0
+        clientId: 'web_' + Math.random().toString(16).slice(2, 10),
+        clean: true,
+        connectTimeout: 8000,
+        reconnectPeriod: 0
       });
+
       client.on('connect', () => {
         connected = true;
-        setConn('ok','Connected');
+        setConn('ok', 'Connected');
         client.subscribe(TOPIC_STATUS);
+        client.subscribe(TOPIC_ACK);
       });
+
       client.on('message', (topic, payload) => {
-        if (topic === TOPIC_STATUS) parseStatus(payload.toString());
+        const msg = payload.toString();
+        if (topic === TOPIC_STATUS) parseStatus(msg);
+        else if (topic === TOPIC_ACK) handleAck(msg);
       });
+
       client.on('close', () => {
-        if (connected) { connected=false; setConn('no','Disconnected'); }
+        if (connected) {
+          connected = false;
+          setConn('no', 'Disconnected');
+        }
       });
+
       setTimeout(() => {
         if (!connected) {
-          try { client.end(true); } catch(e){}
-          connectMQTT(i+1);
+          try { client.end(true); } catch (e) {}
+          connectMQTT(i + 1);
         }
       }, 8500);
     }
