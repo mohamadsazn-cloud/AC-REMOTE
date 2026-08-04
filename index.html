@@ -8,7 +8,7 @@
   <style>
     *{box-sizing:border-box}
     body{background:#f0f2f5;font-family:Arial,sans-serif;text-align:center;margin:0;padding:14px}
-    .card{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.1)}
+    .card{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.1);position:relative}
     h2{color:#1565c0;margin:0 0 4px}
     .clock{font-size:28px;font-weight:bold;color:#222;margin-top:4px}
     .date{font-size:12px;color:#888;margin-bottom:8px}
@@ -16,13 +16,39 @@
     .conn.ok{background:#e8f5e9;color:#2e7d32}
     .conn.no{background:#ffebee;color:#c62828}
     .conn.wait{background:#fff8e1;color:#f57f17}
+
+    /* پاپ‌آپ شناور — روی محتوا، بدون جابه‌جایی صفحه */
     .toast{
-      display:none;margin:0 auto 10px;max-width:100%;
-      background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;
-      padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;
+      position:fixed;
+      top:16px;
+      left:50%;
+      transform:translateX(-50%) translateY(-120%);
+      z-index:9999;
+      min-width:160px;
+      max-width:90%;
+      padding:10px 18px;
+      border-radius:10px;
+      font-size:13px;
+      font-weight:600;
+      text-align:center;
+      pointer-events:none;
+      opacity:0;
+      transition:transform .25s ease, opacity .25s ease;
+      box-shadow:0 4px 16px rgba(0,0,0,.18);
+      background:#e8f5e9;
+      color:#1b5e20;
+      border:1px solid #a5d6a7;
     }
-    .toast.show{display:block}
-    .toast.err{background:#ffebee;color:#b71c1c;border-color:#ef9a9a}
+    .toast.show{
+      transform:translateX(-50%) translateY(0);
+      opacity:1;
+    }
+    .toast.err{
+      background:#ffebee;
+      color:#b71c1c;
+      border-color:#ef9a9a;
+    }
+
     .info{background:#f5f7fa;border-radius:10px;padding:12px 14px;text-align:left;margin-bottom:12px;font-size:14px;line-height:1.75}
     .info b{display:inline-block;width:72px;color:#555}
     .temp{font-size:42px;font-weight:bold;color:#1565c0;margin:6px 0}
@@ -43,12 +69,14 @@
   </style>
 </head>
 <body>
+  <!-- خارج از card تا fixed درست کار کند -->
+  <div id="toast" class="toast"></div>
+
   <div class="card">
     <h2>AC Remote</h2>
     <div class="clock" id="clock">--:--</div>
     <div class="date" id="date"></div>
     <div id="conn" class="conn wait">Connecting...</div>
-    <div id="toast" class="toast"></div>
 
     <div class="info">
       <b>Power</b>: <span id="vPower">—</span><br>
@@ -139,17 +167,19 @@
     function showToast(text, isError) {
       const el = document.getElementById('toast');
       el.textContent = text;
-      el.className = 'toast show' + (isError ? ' err' : '');
+      el.className = 'toast' + (isError ? ' err' : '');
+      // force reflow so animation restarts
+      void el.offsetWidth;
+      el.classList.add('show');
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
-        el.className = 'toast';
-      }, 2500);
+        el.classList.remove('show');
+      }, 2000);
     }
 
     function send(topic, payload) {
       if (!client || !connected) return;
       client.publish(topic, String(payload), { qos: 0 });
-      // waiting for ACK from device
     }
 
     function setModel() {
@@ -201,12 +231,10 @@
     }
 
     function handleAck(msg) {
-      // examples: OK:power  OK:tempup  OK:timer_add_fail
       if (msg.indexOf('fail') >= 0 || msg.indexOf('bad') >= 0) {
         showToast('Failed: ' + msg.replace(/^OK:/, ''), true);
       } else {
-        const name = msg.replace(/^OK:/, '');
-        showToast('Received: ' + name, false);
+        showToast('Received: ' + msg.replace(/^OK:/, ''), false);
       }
     }
 
