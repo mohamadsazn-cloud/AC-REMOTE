@@ -1,327 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>AC Remote</title>
-  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-  <style>
-    *{box-sizing:border-box}
-    body{background:#f0f2f5;font-family:Arial,sans-serif;text-align:center;margin:0;padding:14px}
-    .card{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.1);position:relative}
-    h2{color:#1565c0;margin:0 0 4px}
-    .clock{font-size:28px;font-weight:bold;color:#222;margin-top:4px}
-    .date{font-size:12px;color:#888;margin-bottom:8px}
-    .conn{display:inline-block;font-size:12px;padding:4px 10px;border-radius:20px;margin-bottom:10px;font-weight:600}
-    .conn.ok{background:#e8f5e9;color:#2e7d32}
-    .conn.no{background:#ffebee;color:#c62828}
-    .conn.wait{background:#fff8e1;color:#f57f17}
-
-    /* پاپ‌آپ شناور — روی محتوا، بدون جابه‌جایی صفحه */
-    .toast{
-      position:fixed;
-      top:16px;
-      left:50%;
-      transform:translateX(-50%) translateY(-120%);
-      z-index:9999;
-      min-width:160px;
-      max-width:90%;
-      padding:10px 18px;
-      border-radius:10px;
-      font-size:13px;
-      font-weight:600;
-      text-align:center;
-      pointer-events:none;
-      opacity:0;
-      transition:transform .25s ease, opacity .25s ease;
-      box-shadow:0 4px 16px rgba(0,0,0,.18);
-      background:#e8f5e9;
-      color:#1b5e20;
-      border:1px solid #a5d6a7;
-    }
-    .toast.show{
-      transform:translateX(-50%) translateY(0);
-      opacity:1;
-    }
-    .toast.err{
-      background:#ffebee;
-      color:#b71c1c;
-      border-color:#ef9a9a;
-    }
-
-    .info{background:#f5f7fa;border-radius:10px;padding:12px 14px;text-align:left;margin-bottom:12px;font-size:14px;line-height:1.75}
-    .info b{display:inline-block;width:72px;color:#555}
-    .temp{font-size:42px;font-weight:bold;color:#1565c0;margin:6px 0}
-    .row{display:flex;justify-content:center;gap:14px;margin:8px 0}
-    .temp-btn{width:58px;height:58px;border:none;border-radius:50%;font-size:24px;font-weight:bold;background:#1976d2;color:#fff;cursor:pointer}
-    button{min-width:115px;height:44px;margin:5px;border:none;border-radius:10px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
-    button:active{transform:scale(.96)}
-    button:disabled{opacity:.45;cursor:not-allowed}
-    .power-on{background:#43a047}.power-off{background:#e53935}
-    .gray{background:#546e7a}.blue{background:#1e88e5}.teal{background:#00897b}.red{background:#e53935}
-    .section{background:#f8f9fa;border-radius:10px;padding:12px;margin-top:12px;text-align:left}
-    .section h3{margin:0 0 8px;font-size:13px;color:#333}
-    select,input{padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin:2px 0}
-    .titem{background:#e3f2fd;padding:10px;border-radius:8px;margin:8px 0;font-size:13px;line-height:1.6}
-    .titem b{color:#1565c0}
-    .small{height:34px;font-size:12px;min-width:auto;padding:0 12px}
-    .credit{margin-top:14px;font-size:11px;color:#aaa}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Home Control</title>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f0f; --card:#1a1a1a; --border:#2a2a2a; --text:#e8e8e8; --muted:#888;
+  --accent:#3b82f6; --learn:#f59e0b; --success:#22c55e; --danger:#ef4444; --teal:#14b8a6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px}
+h1{font-size:1.2rem;font-weight:600;text-align:center}
+.sub{text-align:center;color:var(--muted);font-size:.78rem;margin:6px 0 18px}
+.page{display:none;max-width:420px;margin:0 auto}
+.page.active{display:block}
+.back{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:.8rem;cursor:pointer;margin-bottom:14px}
+.grid{display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:.15s;text-align:left}
+.card:active{transform:scale(.98);border-color:var(--accent)}
+.card.disabled{opacity:.4;pointer-events:none}
+.card .t{font-weight:600;margin-bottom:4px}
+.card .d{font-size:.75rem;color:var(--muted)}
+.badge{display:inline-block;margin-top:8px;font-size:.68rem;padding:2px 8px;border-radius:20px;background:#222;color:#777}
+.badge.ok{background:#14532d;color:#86efac}
+.conn{text-align:center;font-size:.75rem;margin-bottom:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px;vertical-align:middle}
+.dot.on{background:var(--success);box-shadow:0 0 8px var(--success)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:.8rem;cursor:pointer}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.name-row{display:flex;gap:8px;margin-bottom:20px}
+.name-row input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;color:var(--text);font-size:.9rem;outline:none}
+.name-row button,.btn-sm{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0 14px;color:var(--text);font-size:.8rem;cursor:pointer}
+.controls{display:flex;gap:10px;margin-bottom:16px}
+.btn{flex:1;aspect-ratio:1;max-width:100px;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--text);font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn:active,.btn.pressed{background:var(--accent);border-color:var(--accent);transform:scale(.94)}
+.btn.selected{background:var(--learn);border-color:var(--learn);color:#111}
+.learn-wrap{max-width:180px;margin:0 auto 16px}
+.btn-learn{width:100%;padding:9px;border:none;border-radius:10px;background:#2a2a2a;color:var(--muted);font-size:.78rem;cursor:pointer;user-select:none}
+.btn-learn.learning{background:var(--danger);color:#fff}
+.btn-learn.holding{background:var(--learn);color:#111}
+.hint{text-align:center;font-size:.7rem;color:var(--muted);line-height:1.45;margin-bottom:8px}
+.info{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:.85rem;line-height:1.7;margin-bottom:14px}
+.info b{display:inline-block;width:64px;color:var(--muted);font-weight:500}
+.temp-big{font-size:2.4rem;font-weight:700;color:var(--accent);text-align:center;margin:8px 0}
+.row{display:flex;justify-content:center;gap:12px;margin:10px 0}
+.temp-btn{width:54px;height:54px;border:none;border-radius:50%;font-size:1.4rem;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
+.actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:10px 0}
+.actions button{min-width:100px;height:42px;border:none;border-radius:10px;font-size:.8rem;font-weight:600;color:#fff;cursor:pointer;background:#333}
+.actions button.pwr-on{background:#16a34a}
+.actions button.pwr-off{background:var(--danger)}
+.actions button.teal{background:var(--teal)}
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:12px;text-align:left}
+.section h3{font-size:.8rem;color:var(--muted);margin-bottom:8px;font-weight:600}
+select,input[type=time],input[type=text]{background:#111;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:.85rem;margin:3px 0}
+.titem{background:#141414;border:1px solid var(--border);padding:10px;border-radius:8px;margin:8px 0;font-size:.8rem;line-height:1.55}
+.credit{text-align:center;margin-top:22px;font-size:.68rem;color:#555}
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120%);z-index:9999;min-width:150px;max-width:90%;padding:10px 18px;border-radius:10px;font-size:.82rem;font-weight:600;text-align:center;pointer-events:none;opacity:0;transition:transform .25s,opacity .25s;background:#14532d;color:#bbf7d0;border:1px solid #166534}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.err{background:#450a0a;color:#fecaca;border-color:#7f1d1d}
+#countdown{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:200;flex-direction:column}
+#countdown.show{display:flex}
+#countdown .num{font-size:4rem;font-weight:700;color:var(--learn)}
+#countdown .label{margin-top:8px;color:var(--muted);font-size:.9rem}
+button:disabled{opacity:.4;cursor:not-allowed}
+</style>
 </head>
 <body>
-  <!-- خارج از card تا fixed درست کار کند -->
-  <div id="toast" class="toast"></div>
+<div id="toast"></div>
+<div id="countdown"><div class="num" id="cdNum">3</div><div class="label">Hold to enter Learn</div></div>
 
-  <div class="card">
-    <h2>AC Remote</h2>
-    <div class="clock" id="clock">--:--</div>
-    <div class="date" id="date"></div>
-    <div id="conn" class="conn wait">Connecting...</div>
-
-    <div class="info">
-      <b>Power</b>: <span id="vPower">—</span><br>
-      <b>Mode</b>: <span id="vMode">—</span><br>
-      <b>Fan</b>: <span id="vFan">—</span><br>
-      <b>Temp</b>: <span id="vTemp">—</span>°C<br>
-      <b>Swing</b>: <span id="vSwing">—</span><br>
-      <b>Model</b>: <span id="vModel">—</span>
+<!-- ========== HOME ========== -->
+<div id="page-home" class="page active">
+  <h1>Home Control</h1>
+  <p class="sub">Select a system</p>
+  <div class="conn"><span class="dot" id="dotHome"></span><span id="connHome">Connecting...</span></div>
+  <div class="grid">
+    <div class="card" onclick="showPage('garage')">
+      <div class="t">Parking Doors</div>
+      <div class="d">Open · Stop · Close · 3 doors · Learn</div>
+      <span class="badge ok">Ready</span>
     </div>
-
-    <div class="temp" id="tempBig">--°C</div>
-    <div class="row">
-      <button class="temp-btn" id="btnUp" onclick="send('ac9f2k7x/tempup','1')" disabled>+</button>
-      <button class="temp-btn" id="btnDown" onclick="send('ac9f2k7x/tempdown','1')" disabled>−</button>
+    <div class="card" onclick="showPage('ac')">
+      <div class="t">Ventilation / AC</div>
+      <div class="d">Power · Temp · Mode · Fan · Timers</div>
+      <span class="badge ok">Ready</span>
     </div>
-
-    <button id="powerBtn" class="power-on" onclick="send('ac9f2k7x/p','TOGGLE')" disabled>POWER</button><br>
-    <button class="gray" id="btnMode" onclick="send('ac9f2k7x/mode','1')" disabled>MODE</button>
-    <button class="gray" id="btnFan" onclick="send('ac9f2k7x/fan','1')" disabled>FAN</button><br>
-    <button class="blue" id="btnSud" onclick="send('ac9f2k7x/swing_ud','1')" disabled>SWING ↕</button>
-    <button class="blue" id="btnSlr" onclick="send('ac9f2k7x/swing_lr','1')" disabled>SWING ↔</button>
-
-    <div class="section">
-      <h3>AC Model</h3>
-      <select id="modelSelect" onchange="setModel()" disabled>
-        <option value="0">Hisense</option>
-        <option value="1">Samsung</option>
-      </select>
+    <div class="card disabled">
+      <div class="t">Light 1</div>
+      <div class="d">Coming soon</div>
+      <span class="badge">Soon</span>
     </div>
-
-    <div class="section">
-      <h3>Timers</h3>
-      <div id="timerList"><div style="color:#999;font-size:13px">No timers</div></div>
-      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #ddd">
-        <b>Add timer</b><br>
-        Model:
-        <select id="newModel">
-          <option value="0">Hisense</option>
-          <option value="1">Samsung</option>
-        </select><br>
-        ON: <input type="time" id="newOn" value="08:00"><br>
-        OFF: <input type="time" id="newOff" value="22:00"><br>
-        <button class="teal small" id="btnAddTimer" onclick="addTimer()" disabled>Add Timer</button>
-      </div>
+    <div class="card disabled">
+      <div class="t">Light 2</div>
+      <div class="d">Coming soon</div>
+      <span class="badge">Soon</span>
     </div>
-
-    <div class="credit">Designed &amp; built by M.S.A</div>
+    <div class="card disabled">
+      <div class="t">Family Cinema</div>
+      <div class="d">Coming soon</div>
+      <span class="badge">Soon</span>
+    </div>
   </div>
+  <p class="credit">Designed &amp; built by M.S.A</p>
+</div>
 
-  <script>
-    const TOPIC_STATUS = 'ac9f2k7x/s';
-    const TOPIC_ACK    = 'ac9f2k7x/ack';
-    const BROKER_URLS = [
-      'wss://broker.hivemq.com:8884/mqtt',
-      'ws://broker.hivemq.com:8000/mqtt'
-    ];
+<!-- ========== GARAGE ========== -->
+<div id="page-garage" class="page">
+  <button class="back" onclick="showPage('home')">← Home</button>
+  <h1>Parking Doors</h1>
+  <p class="sub"><span class="dot" id="dotGarage"></span><span id="connGarage">…</span></p>
+  <div class="tabs">
+    <button class="tab active" id="gtab0" onclick="gSelectDoor(0)">1</button>
+    <button class="tab" id="gtab1" onclick="gSelectDoor(1)">2</button>
+    <button class="tab" id="gtab2" onclick="gSelectDoor(2)">3</button>
+  </div>
+  <div class="name-row">
+    <input type="text" id="gName" maxlength="20" value="Parking 1">
+    <button onclick="gSaveName()">Save</button>
+  </div>
+  <div class="controls">
+    <button class="btn" id="gUp" onclick="gCmd('up')">▲</button>
+    <button class="btn" id="gStop" onclick="gCmd('stop')">⏹</button>
+    <button class="btn" id="gDown" onclick="gCmd('down')">▼</button>
+  </div>
+  <div class="learn-wrap">
+    <button class="btn-learn" id="gLearn">Learn</button>
+  </div>
+  <p class="hint">Hold Learn 3s → choose ▲ ⏹ or ▼ → press remote</p>
+</div>
 
-    let client = null;
-    let connected = false;
-    let localTimers = [];
-    let toastTimer = null;
+<!-- ========== AC ========== -->
+<div id="page-ac" class="page">
+  <button class="back" onclick="showPage('home')">← Home</button>
+  <h1>AC Remote</h1>
+  <p class="sub"><span class="dot" id="dotAc"></span><span id="connAc">…</span></p>
+  <div class="info">
+    <b>Power</b>: <span id="vPower">—</span><br>
+    <b>Mode</b>: <span id="vMode">—</span><br>
+    <b>Fan</b>: <span id="vFan">—</span><br>
+    <b>Temp</b>: <span id="vTemp">—</span>°C<br>
+    <b>Swing</b>: <span id="vSwing">—</span><br>
+    <b>Model</b>: <span id="vModel">—</span>
+  </div>
+  <div class="temp-big" id="tempBig">--°C</div>
+  <div class="row">
+    <button class="temp-btn" id="btnTempUp" onclick="acSend('tempup','1')" disabled>+</button>
+    <button class="temp-btn" id="btnTempDown" onclick="acSend('tempdown','1')" disabled>−</button>
+  </div>
+  <div class="actions">
+    <button id="powerBtn" class="pwr-on" onclick="acSend('p','TOGGLE')" disabled>POWER</button>
+    <button id="btnMode" onclick="acSend('mode','1')" disabled>MODE</button>
+    <button id="btnFan" onclick="acSend('fan','1')" disabled>FAN</button>
+    <button id="btnSud" onclick="acSend('swing_ud','1')" disabled>SWING ↕</button>
+    <button id="btnSlr" onclick="acSend('swing_lr','1')" disabled>SWING ↔</button>
+  </div>
+  <div class="section">
+    <h3>AC Model</h3>
+    <select id="modelSelect" onchange="acSetModel()" disabled>
+      <option value="0">Hisense</option>
+      <option value="1">Samsung</option>
+    </select>
+  </div>
+  <div class="section">
+    <h3>Timers</h3>
+    <div id="timerList"><div style="color:#666;font-size:.8rem">No timers</div></div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+      Model:
+      <select id="newModel"><option value="0">Hisense</option><option value="1">Samsung</option></select><br>
+      ON: <input type="time" id="newOn" value="08:00"><br>
+      OFF: <input type="time" id="newOff" value="22:00"><br>
+      <button class="btn-sm teal" style="margin-top:8px;padding:8px 14px;background:var(--teal);border:none;color:#fff;border-radius:8px" id="btnAddTimer" onclick="acAddTimer()" disabled>Add Timer</button>
+    </div>
+  </div>
+  <p class="credit">Designed &amp; built by M.S.A</p>
+</div>
 
-    function tickClock() {
-      const now = new Date();
-      document.getElementById('clock').textContent =
-        String(now.getHours()).padStart(2,'0') + ':' +
-        String(now.getMinutes()).padStart(2,'0');
-      document.getElementById('date').textContent =
-        now.getFullYear() + '/' +
-        String(now.getMonth()+1).padStart(2,'0') + '/' +
-        String(now.getDate()).padStart(2,'0');
+<script>
+/* ================= CONFIG ================= */
+const GARAGE_DEVICE_ID = "417ca1";  // ← change this
+const AC_PREFIX = "ac9f2k7x";
+const BROKER_URLS = [
+  "wss://broker.hivemq.com:8884/mqtt",
+  "ws://broker.hivemq.com:8000/mqtt"
+];
+
+const gCmdTopic    = `garage/${GARAGE_DEVICE_ID}/cmd`;
+const gStatusTopic = `garage/${GARAGE_DEVICE_ID}/status`;
+const gStateTopic  = `garage/${GARAGE_DEVICE_ID}/state`;
+
+let client = null;
+let connected = false;
+let toastTimer = null;
+
+/* ---------- UI helpers ---------- */
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
+}
+function showToast(text, isError) {
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.className = "toast" + (isError ? " err" : "");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+}
+function setConnUI(ok) {
+  const text = ok ? "Online" : "Offline";
+  ["dotHome","dotGarage","dotAc"].forEach(id => {
+    document.getElementById(id).className = "dot" + (ok ? " on" : "");
+  });
+  document.getElementById("connHome").textContent = ok ? "Connected" : "Disconnected";
+  document.getElementById("connGarage").textContent = text;
+  document.getElementById("connAc").textContent = text;
+  const en = ok;
+  ["powerBtn","btnTempUp","btnTempDown","btnMode","btnFan","btnSud","btnSlr","modelSelect","btnAddTimer"]
+    .forEach(id => { const e = document.getElementById(id); if (e) e.disabled = !en; });
+}
+
+/* ================= MQTT ================= */
+function connectMQTT(i) {
+  if (i >= BROKER_URLS.length) {
+    setConnUI(false);
+    document.getElementById("connHome").textContent = "Connection failed";
+    return;
+  }
+  if (client) try { client.end(true); } catch(e) {}
+  client = mqtt.connect(BROKER_URLS[i], {
+    clientId: "home_" + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    connectTimeout: 8000,
+    reconnectPeriod: 0
+  });
+  client.on("connect", () => {
+    connected = true;
+    setConnUI(true);
+    client.subscribe(gStatusTopic);
+    client.subscribe(gStateTopic);
+    client.subscribe(AC_PREFIX + "/s");
+    client.subscribe(AC_PREFIX + "/ack");
+  });
+  client.on("message", (topic, payload) => {
+    const msg = payload.toString();
+    if (topic === gStatusTopic || topic === gStateTopic) gOnMessage(topic, msg);
+    else if (topic === AC_PREFIX + "/s") acParseStatus(msg);
+    else if (topic === AC_PREFIX + "/ack") acHandleAck(msg);
+  });
+  client.on("close", () => {
+    if (connected) { connected = false; setConnUI(false); }
+  });
+  setTimeout(() => {
+    if (!connected) {
+      try { client.end(true); } catch(e) {}
+      connectMQTT(i + 1);
     }
-    setInterval(tickClock, 1000);
-    tickClock();
+  }, 8500);
+}
 
-    function setConn(state, text) {
-      const el = document.getElementById('conn');
-      el.className = 'conn ' + state;
-      el.textContent = text;
-      const en = state === 'ok';
-      ['powerBtn','btnUp','btnDown','btnMode','btnFan','btnSud','btnSlr','modelSelect','btnAddTimer']
-        .forEach(id => {
-          const e = document.getElementById(id);
-          if (e) e.disabled = !en;
-        });
+/* ================= GARAGE ================= */
+let gDoor = 0, gLearn = "idle", gTarget = "", gNames = ["Parking 1","Parking 2","Parking 3"];
+
+function gPublish(obj) {
+  if (!client || !connected) { showToast("Not connected", true); return; }
+  client.publish(gCmdTopic, JSON.stringify(obj));
+}
+function gUpdateUI() {
+  for (let i = 0; i < 3; i++)
+    document.getElementById("gtab" + i).className = "tab" + (i === gDoor ? " active" : "");
+  document.getElementById("gName").value = gNames[gDoor] || ("Parking " + (gDoor + 1));
+  document.getElementById("gLearn").className = "btn-learn" + (gLearn !== "idle" ? " learning" : "");
+  ["up","stop","down"].forEach(t => {
+    const id = t === "up" ? "gUp" : t === "down" ? "gDown" : "gStop";
+    document.getElementById(id).className = "btn" + (gLearn !== "idle" && gTarget === t ? " selected" : "");
+  });
+}
+function gCmd(c) {
+  const map = { up: "gUp", down: "gDown", stop: "gStop" };
+  const el = document.getElementById(map[c]);
+  if (el) { el.classList.add("pressed"); setTimeout(() => el.classList.remove("pressed"), 180); }
+  if (gLearn === "wait_button") gPublish({ cmd: "learn_select", door: gDoor, target: c });
+  else gPublish({ cmd: c, door: gDoor });
+}
+function gSelectDoor(n) {
+  gDoor = n;
+  gPublish({ cmd: "select_door", door: n });
+  gUpdateUI();
+}
+function gSaveName() {
+  const name = document.getElementById("gName").value.trim();
+  if (!name) return;
+  gPublish({ cmd: "set_name", door: gDoor, name });
+}
+function gOnMessage(topic, msg) {
+  try {
+    const data = JSON.parse(msg);
+    if (data.type === "ack" && data.msg) showToast(data.msg);
+    if (data.type === "state") {
+      if (typeof data.door === "number") gDoor = data.door;
+      if (data.learn) gLearn = data.learn;
+      if (data.target !== undefined) gTarget = data.target || "";
+      if (Array.isArray(data.names)) gNames = data.names;
+      gUpdateUI();
     }
+  } catch(e) {}
+}
 
-    function showToast(text, isError) {
-      const el = document.getElementById('toast');
-      el.textContent = text;
-      el.className = 'toast' + (isError ? ' err' : '');
-      // force reflow so animation restarts
-      void el.offsetWidth;
-      el.classList.add('show');
-      if (toastTimer) clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => {
-        el.classList.remove('show');
-      }, 2000);
-    }
+/* Learn hold 3s */
+let holdTimer = null, countTimer = null, holding = false, holdLeft = 3;
+const learnBtn = document.getElementById("gLearn");
+const cdOverlay = document.getElementById("countdown");
+const cdNum = document.getElementById("cdNum");
+function startHold(e) {
+  e.preventDefault();
+  if (gLearn !== "idle") { gPublish({ cmd: "learn_cancel", door: gDoor }); return; }
+  if (holding) return;
+  holding = true; holdLeft = 3;
+  learnBtn.classList.add("holding");
+  cdNum.textContent = "3";
+  cdOverlay.classList.add("show");
+  countTimer = setInterval(() => { holdLeft--; if (holdLeft > 0) cdNum.textContent = holdLeft; }, 1000);
+  holdTimer = setTimeout(() => {
+    clearInterval(countTimer);
+    cdOverlay.classList.remove("show");
+    learnBtn.classList.remove("holding");
+    holding = false;
+    gPublish({ cmd: "learn_start", door: gDoor });
+  }, 3000);
+}
+function cancelHold(e) {
+  e.preventDefault();
+  if (!holding) return;
+  holding = false;
+  clearTimeout(holdTimer); clearInterval(countTimer);
+  cdOverlay.classList.remove("show");
+  learnBtn.classList.remove("holding");
+}
+learnBtn.addEventListener("mousedown", startHold);
+learnBtn.addEventListener("mouseup", cancelHold);
+learnBtn.addEventListener("mouseleave", cancelHold);
+learnBtn.addEventListener("touchstart", startHold, { passive: false });
+learnBtn.addEventListener("touchend", cancelHold);
+learnBtn.addEventListener("touchcancel", cancelHold);
 
-    function send(topic, payload) {
-      if (!client || !connected) return;
-      client.publish(topic, String(payload), { qos: 0 });
-    }
+/* ================= AC ================= */
+let localTimers = [];
+function acSend(suffix, payload) {
+  if (!client || !connected) return;
+  client.publish(AC_PREFIX + "/" + suffix, String(payload), { qos: 0 });
+}
+function acSetModel() {
+  acSend("model", document.getElementById("modelSelect").value);
+}
+function acHandleAck(msg) {
+  if (msg.indexOf("fail") >= 0 || msg.indexOf("bad") >= 0)
+    showToast("Failed: " + msg.replace(/^OK:/, ""), true);
+  else
+    showToast("Received: " + msg.replace(/^OK:/, ""), false);
+}
+function acParseStatus(msg) {
+  const parts = msg.split("|").map(s => s.trim());
+  let power = "—", temp = "—", mode = "—", fan = "—", swing = "—", model = "—";
+  parts.forEach(p => {
+    if (/^(ON|OFF)$/i.test(p)) power = p.toUpperCase();
+    else if (/^\d+\s*C$/i.test(p)) temp = p.replace(/\s*C/i, "");
+    else if (/^Fan\s+/i.test(p)) fan = p.replace(/^Fan\s+/i, "");
+    else if (/^Swing\s+/i.test(p)) swing = p.replace(/^Swing\s+/i, "");
+    else if (/Hisense|Samsung/i.test(p)) model = p;
+    else if (/Cool|Heat|Dry|Fan|Smart|Auto/i.test(p) && !/^Fan\s/i.test(p)) mode = p;
+  });
+  if (power === "—" && parts[0]) {
+    if (/ON/i.test(parts[0])) power = "ON";
+    if (/OFF/i.test(parts[0])) power = "OFF";
+  }
+  document.getElementById("vPower").textContent = power;
+  document.getElementById("vMode").textContent = mode;
+  document.getElementById("vFan").textContent = fan;
+  document.getElementById("vTemp").textContent = temp;
+  document.getElementById("vSwing").textContent = swing;
+  document.getElementById("vModel").textContent = model;
+  if (temp !== "—") document.getElementById("tempBig").textContent = temp + "°C";
+  const btn = document.getElementById("powerBtn");
+  if (power === "ON") { btn.className = "pwr-off"; btn.textContent = "POWER OFF"; }
+  else if (power === "OFF") { btn.className = "pwr-on"; btn.textContent = "POWER ON"; }
+  if (/Samsung/i.test(model)) document.getElementById("modelSelect").value = "1";
+  else if (/Hisense/i.test(model)) document.getElementById("modelSelect").value = "0";
+}
+function acAddTimer() {
+  const m = document.getElementById("newModel").value;
+  const on = document.getElementById("newOn").value;
+  const off = document.getElementById("newOff").value;
+  if (!on || !off) return;
+  acSend("timer_add", m + "," + on + "," + off);
+  localTimers.push({ model: m === "1" ? "Samsung" : "Hisense", on, off, enabled: true });
+  acRenderTimers();
+}
+function acDelTimer(i) {
+  acSend("timer_del", String(i));
+  localTimers.splice(i, 1);
+  acRenderTimers();
+}
+function acToggleTimer(i) {
+  acSend("timer_toggle", String(i));
+  if (localTimers[i]) localTimers[i].enabled = !localTimers[i].enabled;
+  acRenderTimers();
+}
+function acRenderTimers() {
+  const box = document.getElementById("timerList");
+  if (!localTimers.length) {
+    box.innerHTML = '<div style="color:#666;font-size:.8rem">No timers</div>';
+    return;
+  }
+  let h = "";
+  localTimers.forEach((t, i) => {
+    h += `<div class="titem"><b>${t.model}</b> ${t.enabled ? "ON" : "OFF"}<br>
+      ON <b>${t.on}</b> · OFF <b>${t.off}</b><br>
+      <button class="btn-sm" style="margin-top:6px;padding:6px 10px" onclick="acToggleTimer(${i})">${t.enabled ? "Disable" : "Enable"}</button>
+      <button class="btn-sm" style="margin-top:6px;padding:6px 10px;color:#fca5a5" onclick="acDelTimer(${i})">Delete</button></div>`;
+  });
+  box.innerHTML = h;
+}
 
-    function setModel() {
-      send('ac9f2k7x/model', document.getElementById('modelSelect').value);
-    }
-
-    function addTimer() {
-      const m = document.getElementById('newModel').value;
-      const on = document.getElementById('newOn').value;
-      const off = document.getElementById('newOff').value;
-      if (!on || !off) return;
-      send('ac9f2k7x/timer_add', m + ',' + on + ',' + off);
-      localTimers.push({
-        model: m === '1' ? 'Samsung' : 'Hisense',
-        on, off, enabled: true
-      });
-      renderTimers();
-    }
-
-    function delTimer(i) {
-      send('ac9f2k7x/timer_del', String(i));
-      localTimers.splice(i, 1);
-      renderTimers();
-    }
-
-    function toggleTimer(i) {
-      send('ac9f2k7x/timer_toggle', String(i));
-      if (localTimers[i]) localTimers[i].enabled = !localTimers[i].enabled;
-      renderTimers();
-    }
-
-    function renderTimers() {
-      const box = document.getElementById('timerList');
-      if (!localTimers.length) {
-        box.innerHTML = '<div style="color:#999;font-size:13px">No timers</div>';
-        return;
-      }
-      let h = '';
-      localTimers.forEach((t, i) => {
-        h += `<div class="titem">
-          <b>${t.model || '?'}</b> ${t.enabled ? 'ON' : 'OFF'}<br>
-          ON &nbsp;<b>${t.on}</b><br>
-          OFF <b>${t.off}</b><br>
-          <button class="small gray" onclick="toggleTimer(${i})">${t.enabled ? 'Disable' : 'Enable'}</button>
-          <button class="small red" onclick="delTimer(${i})">Delete</button>
-        </div>`;
-      });
-      box.innerHTML = h;
-    }
-
-    function handleAck(msg) {
-      if (msg.indexOf('fail') >= 0 || msg.indexOf('bad') >= 0) {
-        showToast('Failed: ' + msg.replace(/^OK:/, ''), true);
-      } else {
-        showToast('Received: ' + msg.replace(/^OK:/, ''), false);
-      }
-    }
-
-    function parseStatus(msg) {
-      const parts = msg.split('|').map(s => s.trim());
-      let power = '—', temp = '—', mode = '—', fan = '—', swing = '—', model = '—';
-
-      parts.forEach(p => {
-        if (/^(ON|OFF)$/i.test(p)) power = p.toUpperCase();
-        else if (/^\d+\s*C$/i.test(p)) temp = p.replace(/\s*C/i, '');
-        else if (/^Fan\s+/i.test(p)) fan = p.replace(/^Fan\s+/i, '');
-        else if (/^Swing\s+/i.test(p)) swing = p.replace(/^Swing\s+/i, '');
-        else if (/Hisense|Samsung/i.test(p)) model = p;
-        else if (/Cool|Heat|Dry|Fan|Smart|Auto/i.test(p) && !/^Fan\s/i.test(p)) mode = p;
-      });
-
-      if (power === '—' && parts[0]) {
-        if (/ON/i.test(parts[0])) power = 'ON';
-        if (/OFF/i.test(parts[0])) power = 'OFF';
-      }
-
-      document.getElementById('vPower').textContent = power;
-      document.getElementById('vMode').textContent = mode;
-      document.getElementById('vFan').textContent = fan;
-      document.getElementById('vTemp').textContent = temp;
-      document.getElementById('vSwing').textContent = swing;
-      document.getElementById('vModel').textContent = model;
-      if (temp !== '—') document.getElementById('tempBig').textContent = temp + '°C';
-
-      const btn = document.getElementById('powerBtn');
-      if (power === 'ON') {
-        btn.className = 'power-off';
-        btn.textContent = 'POWER OFF';
-      } else if (power === 'OFF') {
-        btn.className = 'power-on';
-        btn.textContent = 'POWER ON';
-      }
-
-      if (/Samsung/i.test(model)) document.getElementById('modelSelect').value = '1';
-      else if (/Hisense/i.test(model)) document.getElementById('modelSelect').value = '0';
-    }
-
-    function connectMQTT(i) {
-      if (i >= BROKER_URLS.length) {
-        setConn('no', 'Connection failed');
-        return;
-      }
-      setConn('wait', 'Connecting...');
-      if (client) try { client.end(true); } catch (e) {}
-
-      client = mqtt.connect(BROKER_URLS[i], {
-        clientId: 'web_' + Math.random().toString(16).slice(2, 10),
-        clean: true,
-        connectTimeout: 8000,
-        reconnectPeriod: 0
-      });
-
-      client.on('connect', () => {
-        connected = true;
-        setConn('ok', 'Connected');
-        client.subscribe(TOPIC_STATUS);
-        client.subscribe(TOPIC_ACK);
-      });
-
-      client.on('message', (topic, payload) => {
-        const msg = payload.toString();
-        if (topic === TOPIC_STATUS) parseStatus(msg);
-        else if (topic === TOPIC_ACK) handleAck(msg);
-      });
-
-      client.on('close', () => {
-        if (connected) {
-          connected = false;
-          setConn('no', 'Disconnected');
-        }
-      });
-
-      setTimeout(() => {
-        if (!connected) {
-          try { client.end(true); } catch (e) {}
-          connectMQTT(i + 1);
-        }
-      }, 8500);
-    }
-
-    renderTimers();
-    connectMQTT(0);
-  </script>
+/* ================= START ================= */
+if (GARAGE_DEVICE_ID === "YOUR_DEVICE_ID") {
+  document.getElementById("connHome").textContent = "Set GARAGE_DEVICE_ID in index.html";
+} else {
+  connectMQTT(0);
+}
+gUpdateUI();
+acRenderTimers();
+</script>
 </body>
 </html>
