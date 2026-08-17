@@ -8,7 +8,7 @@
 <style>
 :root{
   --bg:#0f0f0f; --card:#1a1a1a; --border:#2a2a2a; --text:#e8e8e8; --muted:#888;
-  --accent:#3b82f6; --learn:#f59e0b; --success:#22c55e; --danger:#ef4444; --teal:#14b8a6;
+  --accent:#3b82f6; --success:#22c55e; --danger:#ef4444; --teal:#14b8a6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px}
@@ -27,110 +27,65 @@ h1{font-size:1.2rem;font-weight:600;text-align:center}
 .conn{text-align:center;font-size:.75rem;margin-bottom:12px;color:var(--muted)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px;vertical-align:middle}
 .dot.on{background:var(--success);box-shadow:0 0 8px var(--success)}
-.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;margin-bottom:28px}
 .tab{flex:1;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:.8rem;cursor:pointer}
 .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.name-row{display:flex;gap:8px;margin-bottom:20px}
-.name-row input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px;color:var(--text);font-size:.9rem;outline:none}
-.name-row button,.btn-sm{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0 14px;color:var(--text);font-size:.8rem;cursor:pointer}
-.controls{display:flex;gap:10px;margin-bottom:16px}
-.btn{flex:1;aspect-ratio:1;max-width:100px;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--text);font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+
+/* Garage controls centered */
+.garage-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:42vh;
+  gap:18px;
+}
+.controls{display:flex;gap:12px;justify-content:center;width:100%;max-width:300px}
+.btn{
+  flex:1;aspect-ratio:1;max-width:96px;
+  border:1px solid var(--border);border-radius:16px;
+  background:var(--card);color:var(--text);font-size:1.6rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;
+}
 .btn:active,.btn.pressed{background:var(--accent);border-color:var(--accent);transform:scale(.94)}
-.btn.selected{background:var(--learn);border-color:var(--learn);color:#111}
-.learn-wrap{max-width:180px;margin:0 auto 16px}
+.btn.selected{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 2px rgba(59,130,246,.35)}
+.learn-wrap{width:100%;max-width:180px}
 .btn-learn{width:100%;padding:9px;border:none;border-radius:10px;background:#2a2a2a;color:var(--muted);font-size:.78rem;cursor:pointer;user-select:none}
 .btn-learn.learning{background:var(--danger);color:#fff}
-.btn-learn.holding{background:var(--learn);color:#111}
-.hint{text-align:center;font-size:.7rem;color:var(--muted);line-height:1.45;margin-bottom:8px}
+.btn-learn.holding{background:var(--accent);color:#fff}
+.hint{text-align:center;font-size:.7rem;color:var(--muted);line-height:1.45}
 
-/* AC status 2x3 */
-.status-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:8px;
-  margin-bottom:16px;
-}
-.status-item{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px 8px;
-  text-align:center;
-}
+.status-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.status-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
 .status-item .lbl{font-size:.68rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.03em}
-.status-item .val{font-size:.95rem;font-weight:600;color:var(--text)}
+.status-item .val{font-size:.95rem;font-weight:600}
 .temp-big{font-size:2.6rem;font-weight:700;color:var(--accent);text-align:center;margin:4px 0 12px}
-
-/* Power large */
 .power-row{margin:0 0 12px}
-.power-btn{
-  width:100%;
-  height:56px;
-  border:none;
-  border-radius:14px;
-  font-size:1rem;
-  font-weight:700;
-  letter-spacing:.04em;
-  cursor:pointer;
-  color:#fff;
-  transition:.15s;
-}
+.power-btn{width:100%;height:56px;border:none;border-radius:14px;font-size:1rem;font-weight:700;letter-spacing:.04em;cursor:pointer;color:#fff}
 .power-btn:active{transform:scale(.98)}
 .power-btn.pwr-on{background:#16a34a}
 .power-btn.pwr-off{background:var(--danger)}
 .power-btn:disabled{opacity:.4;cursor:not-allowed}
-
-/* Other AC controls */
 .ac-row{display:flex;gap:8px;margin-bottom:8px}
-.ac-row button{
-  flex:1;
-  height:46px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  background:var(--card);
-  color:var(--text);
-  font-size:.82rem;
-  font-weight:600;
-  cursor:pointer;
-}
+.ac-row button{flex:1;height:46px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--text);font-size:.82rem;font-weight:600;cursor:pointer}
 .ac-row button:active{background:var(--accent);border-color:var(--accent);color:#fff}
-.ac-row button:disabled{opacity:.4;cursor:not-allowed}
+.ac-row button:disabled{opacity:.4}
 .temp-row{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
-.temp-row .temp-btn{
-  width:56px;
-  height:46px;
-  border:none;
-  border-radius:12px;
-  font-size:1.3rem;
-  font-weight:700;
-  background:var(--accent);
-  color:#fff;
-  cursor:pointer;
-}
+.temp-row .temp-btn{width:56px;height:46px;border:none;border-radius:12px;font-size:1.3rem;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
 .temp-row .temp-btn:disabled{opacity:.4}
-.temp-row .temp-mid{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  font-size:1.1rem;
-  font-weight:600;
-}
-
+.temp-row .temp-mid{flex:1;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:1.1rem;font-weight:600}
 .section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:12px;text-align:left}
 .section h3{font-size:.8rem;color:var(--muted);margin-bottom:8px;font-weight:600}
-select,input[type=time],input[type=text]{background:#111;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:.85rem;margin:3px 0}
+select,input[type=time]{background:#111;border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:.85rem;margin:3px 0}
 .titem{background:#141414;border:1px solid var(--border);padding:10px;border-radius:8px;margin:8px 0;font-size:.8rem;line-height:1.55}
+.btn-sm{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;color:var(--text);font-size:.8rem;cursor:pointer}
 .credit{text-align:center;margin-top:22px;font-size:.68rem;color:#555}
 #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120%);z-index:9999;min-width:150px;max-width:90%;padding:10px 18px;border-radius:10px;font-size:.82rem;font-weight:600;text-align:center;pointer-events:none;opacity:0;transition:transform .25s,opacity .25s;background:#14532d;color:#bbf7d0;border:1px solid #166534}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 #toast.err{background:#450a0a;color:#fecaca;border-color:#7f1d1d}
 #countdown{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:200;flex-direction:column}
 #countdown.show{display:flex}
-#countdown .num{font-size:4rem;font-weight:700;color:var(--learn)}
+#countdown .num{font-size:4rem;font-weight:700;color:var(--accent)}
 #countdown .label{margin-top:8px;color:var(--muted);font-size:.9rem}
 </style>
 </head>
@@ -138,7 +93,7 @@ select,input[type=time],input[type=text]{background:#111;border:1px solid var(--
 <div id="toast"></div>
 <div id="countdown"><div class="num" id="cdNum">3</div><div class="label">Hold to enter Learn</div></div>
 
-<!-- ========== HOME ========== -->
+<!-- HOME -->
 <div id="page-home" class="page active">
   <h1>Home Control</h1>
   <p class="sub">Select a system</p>
@@ -146,11 +101,11 @@ select,input[type=time],input[type=text]{background:#111;border:1px solid var(--
   <div class="grid">
     <div class="card" onclick="showPage('garage')">
       <div class="t">Parking Doors</div>
-      <span class="badge ok">Ready</span>
+      <span class="badge" id="badgeGarage">Offline</span>
     </div>
     <div class="card" onclick="showPage('ac')">
       <div class="t">Air Conditioning System</div>
-      <span class="badge ok">Ready</span>
+      <span class="badge" id="badgeAc">Offline</span>
     </div>
     <div class="card disabled">
       <div class="t">Lights</div>
@@ -164,36 +119,34 @@ select,input[type=time],input[type=text]{background:#111;border:1px solid var(--
   <p class="credit">Designed &amp; built by M.S.A</p>
 </div>
 
-<!-- ========== GARAGE ========== -->
+<!-- GARAGE -->
 <div id="page-garage" class="page">
   <button class="back" onclick="showPage('home')">← Home</button>
   <h1>Parking Doors</h1>
-  <p class="sub"><span class="dot" id="dotGarage"></span><span id="connGarage">…</span></p>
+  <p class="sub"><span class="dot" id="dotGarage"></span><span id="connGarage">Device offline</span></p>
   <div class="tabs">
     <button class="tab active" id="gtab0" onclick="gSelectDoor(0)">1</button>
     <button class="tab" id="gtab1" onclick="gSelectDoor(1)">2</button>
     <button class="tab" id="gtab2" onclick="gSelectDoor(2)">3</button>
   </div>
-  <div class="name-row">
-    <input type="text" id="gName" maxlength="20" value="Parking 1">
-    <button onclick="gSaveName()">Save</button>
+  <div class="garage-wrap">
+    <div class="controls">
+      <button class="btn" id="gUp" onclick="gCmd('up')">▲</button>
+      <button class="btn" id="gStop" onclick="gCmd('stop')">⏹</button>
+      <button class="btn" id="gDown" onclick="gCmd('down')">▼</button>
+    </div>
+    <div class="learn-wrap">
+      <button class="btn-learn" id="gLearn">Learn</button>
+    </div>
+    <p class="hint">Hold Learn 3s → choose ▲ ⏹ or ▼ → press remote</p>
   </div>
-  <div class="controls">
-    <button class="btn" id="gUp" onclick="gCmd('up')">▲</button>
-    <button class="btn" id="gStop" onclick="gCmd('stop')">⏹</button>
-    <button class="btn" id="gDown" onclick="gCmd('down')">▼</button>
-  </div>
-  <div class="learn-wrap">
-    <button class="btn-learn" id="gLearn">Learn</button>
-  </div>
-  <p class="hint">Hold Learn 3s → choose ▲ ⏹ or ▼ → press remote</p>
 </div>
 
-<!-- ========== AC ========== -->
+<!-- AC -->
 <div id="page-ac" class="page">
   <button class="back" onclick="showPage('home')">← Home</button>
   <h1>Air Conditioning System</h1>
-  <p class="sub"><span class="dot" id="dotAc"></span><span id="connAc">…</span></p>
+  <p class="sub"><span class="dot" id="dotAc"></span><span id="connAc">Device offline</span></p>
 
   <div class="status-grid">
     <div class="status-item"><div class="lbl">Power</div><div class="val" id="vPower">—</div></div>
@@ -248,25 +201,28 @@ select,input[type=time],input[type=text]{background:#111;border:1px solid var(--
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const GARAGE_DEVICE_ID = "417ca1";  // ← change this
+const GARAGE_DEVICE_ID = "YOUR_DEVICE_ID";  // ← change this
 const AC_PREFIX = "ac9f2k7x";
 const BROKER_URLS = [
   "wss://broker.hivemq.com:8884/mqtt",
   "ws://broker.hivemq.com:8000/mqtt"
 ];
+const DEVICE_ONLINE_MS = 90000; // 90s without ESP message → offline
 
 const gCmdTopic    = `garage/${GARAGE_DEVICE_ID}/cmd`;
 const gStatusTopic = `garage/${GARAGE_DEVICE_ID}/status`;
 const gStateTopic  = `garage/${GARAGE_DEVICE_ID}/state`;
 
 let client = null;
-let connected = false;
+let mqttConnected = false;
+let garageLastSeen = 0;
+let acLastSeen = 0;
 let toastTimer = null;
 
 function showPage(name) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById("page-" + name).classList.add("active");
+  refreshConnUI();
 }
 function showToast(text, isError) {
   const el = document.getElementById("toast");
@@ -277,22 +233,40 @@ function showToast(text, isError) {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
 }
-function setConnUI(ok) {
-  const text = ok ? "Online" : "Offline";
-  ["dotHome","dotGarage","dotAc"].forEach(id => {
-    document.getElementById(id).className = "dot" + (ok ? " on" : "");
-  });
-  document.getElementById("connHome").textContent = ok ? "Connected" : "Disconnected";
-  document.getElementById("connGarage").textContent = text;
-  document.getElementById("connAc").textContent = text;
-  const en = ok;
+
+function isGarageOnline() { return garageLastSeen > 0 && (Date.now() - garageLastSeen) < DEVICE_ONLINE_MS; }
+function isAcOnline() { return acLastSeen > 0 && (Date.now() - acLastSeen) < DEVICE_ONLINE_MS; }
+
+function refreshConnUI() {
+  // Home: MQTT / internet
+  document.getElementById("dotHome").className = "dot" + (mqttConnected ? " on" : "");
+  document.getElementById("connHome").textContent = mqttConnected ? "Connected" : "Disconnected";
+
+  // Sub-pages + Ready badges: ESP device presence
+  const gOn = isGarageOnline();
+  const aOn = isAcOnline();
+
+  document.getElementById("dotGarage").className = "dot" + (gOn ? " on" : "");
+  document.getElementById("connGarage").textContent = gOn ? "Device online" : "Device offline";
+  const bg = document.getElementById("badgeGarage");
+  bg.textContent = gOn ? "Ready" : "Offline";
+  bg.className = "badge" + (gOn ? " ok" : "");
+
+  document.getElementById("dotAc").className = "dot" + (aOn ? " on" : "");
+  document.getElementById("connAc").textContent = aOn ? "Device online" : "Device offline";
+  const ba = document.getElementById("badgeAc");
+  ba.textContent = aOn ? "Ready" : "Offline";
+  ba.className = "badge" + (aOn ? " ok" : "");
+
+  const en = aOn; // AC controls only when AC ESP is online
   ["powerBtn","btnTempUp","btnTempDown","btnMode","btnFan","btnSud","btnSlr","modelSelect","btnAddTimer"]
     .forEach(id => { const e = document.getElementById(id); if (e) e.disabled = !en; });
 }
 
 function connectMQTT(i) {
   if (i >= BROKER_URLS.length) {
-    setConnUI(false);
+    mqttConnected = false;
+    refreshConnUI();
     document.getElementById("connHome").textContent = "Connection failed";
     return;
   }
@@ -304,8 +278,8 @@ function connectMQTT(i) {
     reconnectPeriod: 0
   });
   client.on("connect", () => {
-    connected = true;
-    setConnUI(true);
+    mqttConnected = true;
+    refreshConnUI();
     client.subscribe(gStatusTopic);
     client.subscribe(gStateTopic);
     client.subscribe(AC_PREFIX + "/s");
@@ -313,32 +287,43 @@ function connectMQTT(i) {
   });
   client.on("message", (topic, payload) => {
     const msg = payload.toString();
-    if (topic === gStatusTopic || topic === gStateTopic) gOnMessage(topic, msg);
-    else if (topic === AC_PREFIX + "/s") acParseStatus(msg);
-    else if (topic === AC_PREFIX + "/ack") acHandleAck(msg);
+    if (topic === gStatusTopic || topic === gStateTopic) {
+      garageLastSeen = Date.now();
+      refreshConnUI();
+      gOnMessage(topic, msg);
+    } else if (topic === AC_PREFIX + "/s") {
+      acLastSeen = Date.now();
+      refreshConnUI();
+      acParseStatus(msg);
+    } else if (topic === AC_PREFIX + "/ack") {
+      acLastSeen = Date.now();
+      refreshConnUI();
+      acHandleAck(msg);
+    }
   });
   client.on("close", () => {
-    if (connected) { connected = false; setConnUI(false); }
+    if (mqttConnected) {
+      mqttConnected = false;
+      refreshConnUI();
+    }
   });
   setTimeout(() => {
-    if (!connected) {
+    if (!mqttConnected) {
       try { client.end(true); } catch(e) {}
       connectMQTT(i + 1);
     }
   }, 8500);
 }
 
-/* ================= GARAGE ================= */
-let gDoor = 0, gLearn = "idle", gTarget = "", gNames = ["Parking 1","Parking 2","Parking 3"];
-
+/* GARAGE */
+let gDoor = 0, gLearn = "idle", gTarget = "";
 function gPublish(obj) {
-  if (!client || !connected) { showToast("Not connected", true); return; }
+  if (!client || !mqttConnected) { showToast("Not connected", true); return; }
   client.publish(gCmdTopic, JSON.stringify(obj));
 }
 function gUpdateUI() {
   for (let i = 0; i < 3; i++)
     document.getElementById("gtab" + i).className = "tab" + (i === gDoor ? " active" : "");
-  document.getElementById("gName").value = gNames[gDoor] || ("Parking " + (gDoor + 1));
   document.getElementById("gLearn").className = "btn-learn" + (gLearn !== "idle" ? " learning" : "");
   ["up","stop","down"].forEach(t => {
     const id = t === "up" ? "gUp" : t === "down" ? "gDown" : "gStop";
@@ -357,11 +342,6 @@ function gSelectDoor(n) {
   gPublish({ cmd: "select_door", door: n });
   gUpdateUI();
 }
-function gSaveName() {
-  const name = document.getElementById("gName").value.trim();
-  if (!name) return;
-  gPublish({ cmd: "set_name", door: gDoor, name });
-}
 function gOnMessage(topic, msg) {
   try {
     const data = JSON.parse(msg);
@@ -370,7 +350,6 @@ function gOnMessage(topic, msg) {
       if (typeof data.door === "number") gDoor = data.door;
       if (data.learn) gLearn = data.learn;
       if (data.target !== undefined) gTarget = data.target || "";
-      if (Array.isArray(data.names)) gNames = data.names;
       gUpdateUI();
     }
   } catch(e) {}
@@ -412,15 +391,13 @@ learnBtn.addEventListener("touchstart", startHold, { passive: false });
 learnBtn.addEventListener("touchend", cancelHold);
 learnBtn.addEventListener("touchcancel", cancelHold);
 
-/* ================= AC ================= */
+/* AC */
 let localTimers = [];
 function acSend(suffix, payload) {
-  if (!client || !connected) return;
+  if (!client || !mqttConnected) return;
   client.publish(AC_PREFIX + "/" + suffix, String(payload), { qos: 0 });
 }
-function acSetModel() {
-  acSend("model", document.getElementById("modelSelect").value);
-}
+function acSetModel() { acSend("model", document.getElementById("modelSelect").value); }
 function acHandleAck(msg) {
   if (msg.indexOf("fail") >= 0 || msg.indexOf("bad") >= 0)
     showToast("Failed: " + msg.replace(/^OK:/, ""), true);
@@ -464,11 +441,7 @@ function acAddTimer() {
   localTimers.push({ model: m === "1" ? "Samsung" : "Hisense", on, off, enabled: true });
   acRenderTimers();
 }
-function acDelTimer(i) {
-  acSend("timer_del", String(i));
-  localTimers.splice(i, 1);
-  acRenderTimers();
-}
+function acDelTimer(i) { acSend("timer_del", String(i)); localTimers.splice(i, 1); acRenderTimers(); }
 function acToggleTimer(i) {
   acSend("timer_toggle", String(i));
   if (localTimers[i]) localTimers[i].enabled = !localTimers[i].enabled;
@@ -484,11 +457,14 @@ function acRenderTimers() {
   localTimers.forEach((t, i) => {
     h += `<div class="titem"><b>${t.model}</b> ${t.enabled ? "ON" : "OFF"}<br>
       ON <b>${t.on}</b> · OFF <b>${t.off}</b><br>
-      <button class="btn-sm" style="margin-top:6px;padding:6px 10px" onclick="acToggleTimer(${i})">${t.enabled ? "Disable" : "Enable"}</button>
-      <button class="btn-sm" style="margin-top:6px;padding:6px 10px;color:#fca5a5" onclick="acDelTimer(${i})">Delete</button></div>`;
+      <button class="btn-sm" style="margin-top:6px" onclick="acToggleTimer(${i})">${t.enabled ? "Disable" : "Enable"}</button>
+      <button class="btn-sm" style="margin-top:6px;color:#fca5a5" onclick="acDelTimer(${i})">Delete</button></div>`;
   });
   box.innerHTML = h;
 }
+
+// periodic refresh of device-online badges
+setInterval(refreshConnUI, 5000);
 
 if (GARAGE_DEVICE_ID === "YOUR_DEVICE_ID") {
   document.getElementById("connHome").textContent = "Set GARAGE_DEVICE_ID in index.html";
@@ -497,6 +473,7 @@ if (GARAGE_DEVICE_ID === "YOUR_DEVICE_ID") {
 }
 gUpdateUI();
 acRenderTimers();
+refreshConnUI();
 </script>
 </body>
 </html>
